@@ -12,7 +12,7 @@ Project Overview is found here : [Click Here](https://github.com/users/KhyatiSat
 The repository for the yocto build : [Click Here](https://github.com/cu-ecen-aeld/final-project-MaanasMDK)
 
 ## Kernel Driver:
-The repository for kernel drivers : [Click Here](https://github.com/KhyatiSatta/final-project-KhyatiSatta)
+The repository for kernel drivers : [Click Here](https://github.com/cu-ecen-aeld/final-project-KhyatiSatta)
 
 ## Application code:
 The repository for motion-detection algorithm : [Click here](https://github.com/cu-ecen-aeld/final-project-nihalthirunakarasu)
