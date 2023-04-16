@@ -267,8 +267,8 @@ static void mainloop(void)
     struct timespec read_delay;
     struct timespec time_error;
 
-    read_delay.tv_sec = 1;
-    read_delay.tv_nsec = 0;
+    read_delay.tv_sec = 0;
+    read_delay.tv_nsec = 50000000;
 
     for (;;)
     {
