@@ -11,16 +11,16 @@
  *
  *      This program is provided with the V4L2 API
  * see http://linuxtv.org/docs.php for more information
+ *
+ *@author - Additional code by - Khyati Satta
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-
-#include <getopt.h> /* getopt_long() */
-
-#include <fcntl.h> /* low-level i/o */
+#include <fcntl.h> 
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -28,10 +28,11 @@
 #include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
-
+#include <signal.h>
 #include <linux/videodev2.h>
-
 #include <time.h>
+#include <syslog.h>
+#include <stdbool.h>
 
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 #define COLOR_CONVERT
@@ -39,6 +40,31 @@
 #define VRES 240
 #define HRES_STR "320"
 #define VRES_STR "240"
+
+
+// Global flag for tracking the end of camera frame capture
+static volatile bool is_capture = true;
+
+
+// Signal handler for SIGINT, SIGTERM and SIGALRM signals
+void signalHandler(int signal)
+{
+    switch(signal){
+        case SIGINT:
+        syslog(LOG_DEBUG ,"Caught signal SIGINT\n");
+        // printf("Caught signal SIGINT\n");
+        is_capture = false; 
+        break;
+
+        case SIGTERM:
+        syslog(LOG_DEBUG ,"Caught signal SIGTERM\n");
+        // printf("Caught signal SIGTERM\n");
+        is_capture = false;
+        break;
+    }
+
+     
+}
 
 // Format is used by a number of functions, so made as a file global
 static struct v4l2_format fmt;
@@ -49,13 +75,11 @@ struct buffer
     size_t length;
 };
 
-static char *dev_name;
+const char *dev_name = "/dev/video0";
 static int fd = -1;
 struct buffer *buffers;
 static unsigned int n_buffers;
-static int out_buf;
 static int force_format = 1;
-static int frame_count = 10;
 
 static void errno_exit(const char *s)
 {
@@ -79,7 +103,7 @@ char ppm_dumpname[] = "frames/test00000000.ppm";
 
 static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec *time)
 {
-    int written, i, total, dumpfd;
+    int written, total, dumpfd;
 
 
     snprintf(&ppm_dumpname[11], 9, "%08d", tag);
@@ -89,9 +113,9 @@ static void dump_ppm(const void *p, int size, unsigned int tag, struct timespec 
     printf("dumpfd: %d\n", dumpfd);
 
     snprintf(&ppm_header[4], 11, "%010d", (int)time->tv_sec);
-    strncat(&ppm_header[14], " sec ", 5);
+    strncat(&ppm_header[14], " sec  ", 5);
     snprintf(&ppm_header[19], 11, "%010d", (int)((time->tv_nsec) / 1000000));
-    strncat(&ppm_header[29], " msec \n" HRES_STR " " VRES_STR "\n255\n", 19);
+    strcat(&ppm_header[29], " msec \n" HRES_STR " " VRES_STR "\n255\n");
 
     // subtract 1 because sizeof for string includes null terminator
     written = write(dumpfd, ppm_header, sizeof(ppm_header) - 1);
@@ -161,7 +185,7 @@ unsigned char bigbuffer[(1280 * 960)];
 
 static void process_image(const void *p, int size)
 {
-    int i, newi, newsize = 0;
+    int i, newi = 0;
     struct timespec frame_time;
     int y_temp, y2_temp, u_temp, v_temp;
     unsigned char *pptr = (unsigned char *)p;
@@ -202,7 +226,6 @@ static void process_image(const void *p, int size)
 static int read_frame(void)
 {
     struct v4l2_buffer buf;
-    unsigned int i;
 
     CLEAR(buf);
 
@@ -241,63 +264,50 @@ static int read_frame(void)
 
 static void mainloop(void)
 {
-    unsigned int count;
     struct timespec read_delay;
     struct timespec time_error;
 
-    read_delay.tv_sec = 0;
-    read_delay.tv_nsec = 30000;
+    read_delay.tv_sec = 1;
+    read_delay.tv_nsec = 0;
 
-    count = frame_count;
-
-    while (count > 0)
+    for (;;)
     {
-        for (;;)
+        fd_set fds;
+        struct timeval tv;
+        int r;
+
+        FD_ZERO(&fds);
+        FD_SET(fd, &fds);
+
+        /* Timeout. */
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
+
+        r = select(fd + 1, &fds, NULL, NULL, &tv);
+
+        if (-1 == r)
         {
-            fd_set fds;
-            struct timeval tv;
-            int r;
-
-            FD_ZERO(&fds);
-            FD_SET(fd, &fds);
-
-            /* Timeout. */
-            tv.tv_sec = 2;
-            tv.tv_usec = 0;
-
-            r = select(fd + 1, &fds, NULL, NULL, &tv);
-
-            if (-1 == r)
-            {
-                if (EINTR == errno)
-                    continue;
-                errno_exit("select");
-            }
-
-            if (0 == r)
-            {
-                fprintf(stderr, "select timeout\n");
-                exit(EXIT_FAILURE);
-            }
-
-            if (read_frame())
-            {
-                if (nanosleep(&read_delay, &time_error) != 0)
-                    perror("nanosleep");
-                else
-                    printf("time_error.tv_sec=%ld, time_error.tv_nsec=%ld\n", time_error.tv_sec, time_error.tv_nsec);
-
-                count--;
-                break;
-            }
-
-            /* EAGAIN - continue select loop unless count done. */
-            if (count <= 0)
-                break;
+            if (EINTR == errno)
+                continue;
+            errno_exit("select");
         }
 
-        if (count <= 0)
+        if (0 == r)
+        {
+            fprintf(stderr, "select timeout\n");
+            exit(EXIT_FAILURE);
+        }
+
+        if (read_frame())
+        {
+            if (nanosleep(&read_delay, &time_error) != 0)
+                perror("nanosleep");
+            else
+                printf("time_error.tv_sec=%ld, time_error.tv_nsec=%ld\n", time_error.tv_sec, time_error.tv_nsec);
             break;
+        }
+
+        /* EAGAIN - continue select loop unless count done. */
     }
 }
 
@@ -317,7 +327,7 @@ static void start_capturing(void)
 
     for (i = 0; i < n_buffers; ++i)
     {
-        printf("allocated buffer %d\n", i);
+        // printf("allocated buffer %d\n", i);
         struct v4l2_buffer buf;
 
         CLEAR(buf);
@@ -532,7 +542,7 @@ static void open_device(void)
         exit(EXIT_FAILURE);
     }
 
-    fd = open(dev_name, O_RDWR /* required */ | O_NONBLOCK, 0);
+    fd = open(dev_name, O_RDWR | O_NONBLOCK, 0);
 
     if (-1 == fd)
     {
@@ -544,13 +554,16 @@ static void open_device(void)
 
 int main(int argc, char **argv)
 {
-
-    dev_name = "/dev/video0";
-
     open_device();
     init_device();
     start_capturing();
-    mainloop();
+
+    // Keep capturing frames till a SIGINT or SIGTERM signal is not triggered
+    while(is_capture){
+        mainloop();
+    }
+    
+    is_capture = false;
     stop_capturing();
     uninit_device();
     close_device();
