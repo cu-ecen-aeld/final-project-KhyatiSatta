@@ -6,13 +6,13 @@
 CC = gcc
 CFLAGS = -g -Wall -Werror
 
-all: cam_capture
+all: camera_driver
 
-cam_capture: cam_capture.c
-	$(CC) cam_capture.c $(CFLAGS)  -o cam_capture
+camera_driver: camera_driver.c
+	$(CC) camera_driver.c $(CFLAGS)  -o camera_driver
 
 clean:
-	rm -rf *.o cam_capture 
+	rm -rf *.o camera_driver 
 
 
 
