@@ -376,7 +376,7 @@ static void capture_frame(void)
             if (nanosleep(&read_delay, &time_error) != 0)
                 perror("nanosleep");
             else
-                printf("time_error.tv_sec=%ld, time_error.tv_nsec=%ld\n", time_error.tv_sec, time_error.tv_nsec);
+                // printf("time_error.tv_sec=%ld, time_error.tv_nsec=%ld\n", time_error.tv_sec, time_error.tv_nsec);
             break;
         }
 
@@ -742,6 +742,8 @@ static void open_device(void)
     }
 }
 
+// Main camera capture logic
+// Captures frames till 
 int camera_capture()
 {
     open_device();
@@ -749,9 +751,12 @@ int camera_capture()
     start_capturing();
 
     // Keep capturing frames till a SIGINT or SIGTERM signal is not triggered
-    while(is_capture){
-        capture_frame();
-    }
+    // while(is_capture){
+    //     capture_frame();
+    // }
+
+    // Edit: Capture a single frame
+    capture_frame();
     
     is_capture = false;
     stop_capturing();
