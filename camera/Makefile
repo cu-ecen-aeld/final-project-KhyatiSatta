@@ -3,7 +3,7 @@
 # Date - 15 April 2023
 # File Description - Makefile for the cam_capture.c 
 
-CC = gcc
+CC := $(CROSS_COMPILE)gcc
 CFLAGS = -g -Wall -Werror
 
 all: camera_driver
