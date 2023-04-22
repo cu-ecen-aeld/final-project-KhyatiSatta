@@ -744,7 +744,7 @@ static void open_device(void)
 
 // Main camera capture logic
 // Captures frames till 
-int camera_capture()
+int main()
 {
     open_device();
     init_device();
@@ -755,7 +755,7 @@ int camera_capture()
     //     capture_frame();
     // }
 
-    // Edit: Capture a single frame
+    // Edit: Capture a single frame - Testing for Gstreamer
     capture_frame();
     
     is_capture = false;
