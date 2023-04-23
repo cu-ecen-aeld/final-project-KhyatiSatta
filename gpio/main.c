@@ -1,13 +1,10 @@
-/***************************************************************************//**
-*  \file       aesdgpio.c
-*
-*  \details    Simple GPIO driver
-*
-*  \author     Maanas Makam Dileep Kumar
-*
-*  \Reference https://embetronicx.com/tutorials/linux/device-drivers/gpio-driver-basic-using-raspberry-pi/
-*
-*******************************************************************************/
+/***********************************************************************
+* Filename : main.c
+* Author : Maanas Makam Dileep Kumar
+* Description : Simple GPIO driver
+* Date : 04/23/2023
+* References : https://embetronicx.com/tutorials/linux/device-drivers/gpio-driver-basic-using-raspberry-pi/
+************************************************************************/
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
