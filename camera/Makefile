@@ -3,16 +3,26 @@
 # Date - 15 April 2023
 # File Description - Makefile for the cam_capture.c 
 
-CC := $(CROSS_COMPILE)gcc
-CFLAGS = -g -Wall -Werror
+CROSS_COMPILE =
+ifeq ($(CC),)
+	CC = $(CROSS_COMPILE)gcc
+endif
+ifeq ($(CFLAGS),)
+	CFLAGS = -g -Wall -Werror
+endif
+ifeq ($(LDFLAGS),)
+	LDFLAGS = 
+endif
 
-all: camera_driver
+SRC := camera_driver.c
+TARGET ?= camera_driver
 
-camera_driver: camera_driver.c
-	$(CC) camera_driver.c $(CFLAGS)  -o camera_driver
+all: $(TARGET)
+
+$(TARGET) : $(SRC)
+	$(CC) $(CFLAGS) -o $(TARGET) camera_driver.c $(LDFLAGS)
 
 clean:
-	rm -rf *.o camera_driver 
-
+	-rm -f *.o $(TARGET) *.elf *.map
 
 
